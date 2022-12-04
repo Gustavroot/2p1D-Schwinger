@@ -178,6 +178,8 @@ int main(int argc, char **argv) {
     iter_offset = 2*p.therm;    
   }
 
+  /*
+
   // Measure top charge on mother ensemble
   top = measTopCharge(gaugex, p);
   top_old = round(top);
@@ -217,8 +219,6 @@ int main(int argc, char **argv) {
     if( (iter+1)%p.skip == 0) {
       
       count++; //Number of measurements taken
-
-      /*
 
       //Checkpoint the gauge field?
       if( (iter+1)%p.chkpt == 0) {	  
@@ -280,11 +280,11 @@ int main(int argc, char **argv) {
       //Vacuum Trace
       if(p.measVT) measVacuumTrace(gauge, top_old, iter, p);
       //-------------------------------------------------------------
-
-      */
     }
 
   }
+
+  */
 
   auto stop = high_resolution_clock::now();
   auto duration = duration_cast<microseconds>(stop - start);
@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
 
   cout << "Total execution time : " << gst.tot_time/(1.0e6) << endl;
   cout << "Inversions time : " << gst.inv_time/(1.0e6) << endl;
-  cout << "Matmuls time : " << gst.matmul_time/(1.0e6) << endl;
+  cout << "Matmuls time (excluding g3 application) : " << gst.matmul_time/(1.0e6) << endl;
 
   buff_frees();
 

@@ -10,10 +10,12 @@ mkdir -p {gauge,data/{data,plaq,creutz,polyakov,rect,top,pion,vacuum}}
 
 # configure preamble
 #---------------------------------------------------------------
-LX=16
-LY=16
+LX=512
+LY=512
 
-export OMP_NUM_THREADS=4
+export MKL_NUM_THREADS=64
+export NUMEXPR_NUM_THREADS=64
+export OMP_NUM_THREADS=64
 
 # Construct the correct executable
 cp main_template.cpp main.cpp

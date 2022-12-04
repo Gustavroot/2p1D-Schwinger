@@ -56,11 +56,18 @@ template<typename T> inline T dotField(const T psi1[LX][LY][2], const T psi2[LX]
 
 // Inner product
 template<typename T> inline T dotField(T*** psi1, T*** psi2) {
-  T scalar = (T) 0.0;
-  for(int x=0; x<LX; x++)
-    for(int y=0; y<LY; y++)
-      for(int s=0; s<2; s++)
-	scalar += conj(psi1[x][y][s])*psi2[x][y][s];
+  double scalar = (double) 0.0;
+  int nr_elems = LX*LY*2;
+
+  #pragma omp parallel for reduction(+:scalar)
+  for(int i=0; i < nr_elems; i++){
+
+    int x = i / (LY*2);
+    int y = (i % (LY*2)) / 2;
+    int s = i % 2;
+
+    scalar += real(conj(psi1[x][y][s])*psi2[x][y][s]);
+  }
   return scalar;
 }
 
@@ -78,11 +85,17 @@ template<typename T> inline double norm2(const T psi[LX][LY][2]) {
 // Norm squared 
 template<typename T> inline double norm2(T psi) {
   double norm2 = 0.0;
-  for(int x=0; x<LX; x++)
-    for(int y=0; y<LY; y++)
-      for(int s=0; s<2; s++)
-	norm2 += (psi[x][y][s].real() * psi[x][y][s].real() + psi[x][y][s].imag() * psi[x][y][s].imag());
-  
+  int nr_elems = LX*LY*2;
+
+  #pragma omp parallel for reduction(+:norm2)
+  for(int i=0; i < nr_elems; i++){
+
+    int x = i / (LY*2);
+    int y = (i % (LY*2)) / 2;
+    int s = i % 2;
+
+    norm2 += real((psi[x][y][s].real() * psi[x][y][s].real() + psi[x][y][s].imag() * psi[x][y][s].imag()));
+  }
   return norm2;
 }
 
@@ -132,6 +145,7 @@ template<typename T> inline void axpy(const double a, const T X[LX][LY][2], T Y[
 
 //axpy in place 
 template<typename T> inline void axpy(const double a, T*** X, T*** Y){
+  #pragma omp parallel for
   for(int x=0; x<LX; x++)
     for(int y=0; y<LY; y++)
       for(int s=0; s<2; s++)
@@ -151,6 +165,7 @@ template<typename T> inline void axpy(const double a, const T X[LX][LY][2],
 //axpy in result
 template<typename T> inline void axpy(const double a, T*** X,
 				      T*** Y, T*** result){  
+  #pragma omp parallel for
   for(int x=0; x<LX; x++)
     for(int y=0; y<LY; y++)
       for(int s=0; s<2; s++)

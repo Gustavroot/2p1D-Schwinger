@@ -113,7 +113,8 @@ void g3psi(Complex psi1[LX][LY][2]){
 }
 
 void g3psi(Complex*** psi1){
-  
+
+  #pragma omp parallel for
   for(int x=0; x<LX; x++)
     for(int y=0; y<LY; y++) {
       psi1[x][y][1] *= -1.0;
