@@ -12,6 +12,9 @@ mkdir -p {gauge,data/{data,plaq,creutz,polyakov,rect,top,pion,vacuum}}
 #---------------------------------------------------------------
 LX=16
 LY=16
+
+export OMP_NUM_THREADS=4
+
 # Construct the correct executable
 cp main_template.cpp main.cpp
 cp Makefile_template Makefile
@@ -24,12 +27,12 @@ make
 #---------------------------------------------------------------
 
 # The value of the coupling in the U(1) 2D theory
-BETA=$1
+BETA=4.0 #$1
 
 # The total number of HMC iterations to perform.
-HMC_ITER=1000
+HMC_ITER=50 #1000
 # The number of HMC iterations for thermalisation.
-HMC_THERM=25
+HMC_THERM=5 #25
 # The number of HMC iterations to skip bewteen measurements.
 HMC_SKIP=5
 # Dump the gauge field every HMC_CHKPT iterations after thermalisation.

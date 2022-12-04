@@ -4,7 +4,9 @@
 #include <string.h>
 #include <cmath>
 #include <complex>
+#include <chrono>
 
+using namespace std::chrono;
 using namespace std;
 
 #define LX __LX__
@@ -33,13 +35,13 @@ typedef complex<double> Complex;
 
 //Dimension dependent HMC functions defined in main file
 //----------------------------------------------------------------------------
-void trajectory(double mom[LX][LY][D], Complex gauge[LX][LY][D],
-		Complex phi[LX][LY][2], param_t p, int iter);
-int hmc(Complex gauge[LX][LY][D], param_t p, int iter);
-void forceU(double fU[LX][LY][D], Complex gauge[LX][LY][D], param_t p);
-void update_mom(double fU[LX][LY][D], double fD[LX][LY][D],
-		double mom[LX][LY][D], double dtau);
-void update_gauge(Complex gauge[LX][LY][D], double mom[LX][LY][D], double dtau);
+void trajectory(double*** mom, Complex*** gauge,
+		Complex*** phi, param_t p, int iter);
+int hmc(Complex*** gauge, param_t p, int iter);
+void forceU(double* fU, Complex*** gauge, param_t p);
+void update_mom(double*** fU, double*** fD,
+		double*** mom, double dtau);
+void update_gauge(Complex*** gauge, double*** mom, double dtau);
 //----------------------------------------------------------------------------
 
 //Global variables.
@@ -47,7 +49,13 @@ int hmccount = 0;
 double expdHAve = 0.0;
 double dHAve = 0.0;
 
+global_struct gst;
+
 int main(int argc, char **argv) {
+
+  gst.tot_time = 0.0;
+  gst.inv_time = 0.0;
+  gst.matmul_time = 0.0;
 
   param_t p;
   
@@ -109,10 +117,16 @@ int main(int argc, char **argv) {
   double plaqSum = 0.0;
   int index = 0;
   for(int i = 0; i < histL; i++) histQ[i] = 0;
-  
-  Complex gauge[LX][LY][D];
-  zeroLat(gauge);
-    
+
+  buff_allocs();
+
+  Complex*** gaugex = gst.b01;
+  Complex*** buff1 = gst.b02;
+  Complex*** buff2 = gst.b03;
+  Complex*** buff3 = gst.b04;
+
+  zeroLat(gaugex);
+
   int count = 0;
   string name;
   fstream outPutFile;
@@ -123,14 +137,16 @@ int main(int argc, char **argv) {
   FILE *fp;
 
   printParams(p);  
-  gaussStart(gauge,p);  // hot start
+  gaussStart(gaugex,p);  // hot start
 
   //Start simulation
   double time0 = -((double)clock());
   int iter_offset = 0;
   int iter = 0;
   cout << setprecision(16);
-  
+
+  auto start = high_resolution_clock::now();
+
   if(p.checkpointStart > 0) {
 
     //Read in gauge field if requested
@@ -138,23 +154,23 @@ int main(int argc, char **argv) {
     name = "gauge/gauge";
     constructName(name, p);
     name += "_traj" + to_string(p.checkpointStart) + ".dat";	
-    readGaugeLattice(gauge,name);
+    readGaugeLattice(gaugex, name);
     iter_offset = p.checkpointStart;    
   } else {
-    
+
     //Thermalise from random start
     //---------------------------------------------------------------------
     for(iter=0; iter<p.therm; iter++){  
       //Perform HMC step
-      accept = hmc(gauge, p, iter);
+      accept = hmc(gaugex, p, iter);
       double time = time0 + clock();
       cout << fixed << iter+1 << " ";              //Iteration
       cout << time/CLOCKS_PER_SEC << " " << endl;  //Time
     }
-    
-    for(iter=p.therm; iter<2*p.therm; iter++){  
+
+    for(iter=p.therm; iter<2*p.therm; iter++){
       //Perform HMC step with accept/reject
-      accept = hmc(gauge, p, iter);
+      accept = hmc(gaugex, p, iter);
       double time = time0 + clock();
       cout << fixed << iter+1 << " ";             //Iteration
       cout << time/CLOCKS_PER_SEC << " " << endl; //Time
@@ -163,16 +179,16 @@ int main(int argc, char **argv) {
   }
 
   // Measure top charge on mother ensemble
-  top = measTopCharge(gauge, p);
+  top = measTopCharge(gaugex, p);
   top_old = round(top);
 
   //Begin thermalised trajectories
   //---------------------------------------------------------------------
   for(iter=iter_offset; iter<p.iterHMC + iter_offset; iter++){
-    
+
     //Perform HMC step
-    accept = hmc(gauge, p, iter);
-    
+    accept = hmc(gaugex, p, iter);
+
     //HMC acceptance
     accepted += accept;
 
@@ -180,7 +196,7 @@ int main(int argc, char **argv) {
     //---------------------------------------------------------------------
     if(accept == 1) {
       
-      top = measTopCharge(gauge, p);
+      top = measTopCharge(gaugex, p);
       top_int = round(top);
       name = "data/top/top_charge";
       constructName(name, p);
@@ -195,19 +211,21 @@ int main(int argc, char **argv) {
       if(top_old == top_int) top_stuck++;
       top_old = top_int;
     }
-    
+
     //Perform Measurements
     //---------------------------------------------------------------------
     if( (iter+1)%p.skip == 0) {
       
       count++; //Number of measurements taken
 
+      /*
+
       //Checkpoint the gauge field?
       if( (iter+1)%p.chkpt == 0) {	  
 	name = "gauge/gauge";
 	constructName(name, p);
 	name += "_traj" + to_string(iter+1) + ".dat";
-	writeGaugeLattice(gauge, name);
+	writeGaugeLattice(gaugex, name);
       }
       
       //Plaquette action
@@ -262,20 +280,37 @@ int main(int argc, char **argv) {
       //Vacuum Trace
       if(p.measVT) measVacuumTrace(gauge, top_old, iter, p);
       //-------------------------------------------------------------
+
+      */
     }
+
   }
+
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<microseconds>(stop - start);
+  gst.tot_time += duration.count();
+
+  cout << "Total execution time : " << gst.tot_time/(1.0e6) << endl;
+  cout << "Inversions time : " << gst.inv_time/(1.0e6) << endl;
+  cout << "Matmuls time : " << gst.matmul_time/(1.0e6) << endl;
+
+  buff_frees();
+
   return 0;
 }
 
 // HMC Routines
 //---------------------------------------------------------------------
-int hmc(Complex gauge[LX][LY][D], param_t p, int iter) {
-  
+int hmc(Complex*** gauge, param_t p, int iter) {
+
   int accept = 0;
+
+  double*** mom = gst.c01;
   
-  double mom[LX][LY][2];
-  Complex gaugeOld[LX][LY][2];
-  Complex phi[LX][LY][2], chi[LX][LY][2];
+  Complex*** gaugeOld = gst.b02;
+  Complex*** phi = gst.b03;
+  Complex*** chi = gst.b04;
+
   double H, Hold;
 
   copyLat(gaugeOld, gauge);
@@ -296,7 +331,9 @@ int hmc(Complex gauge[LX][LY][D], param_t p, int iter) {
   }
 
   if (iter >= p.therm) Hold = measAction(mom, gauge, chi, p, false);
+
   trajectory(mom, gauge, phi, p, iter);
+
   if (iter >= p.therm) H = measAction(mom, gauge, phi, p, true);
   
   if (iter >= 2*p.therm) {      
@@ -310,39 +347,43 @@ int hmc(Complex gauge[LX][LY][D], param_t p, int iter) {
     if ( drand48() > exp(-(H-Hold)) ) copyLat(gauge, gaugeOld);
     else accept = 1;
   }
+
+  // TODO : add freeing of data for gaugex, buff1, buff2, buff3
   
   return accept;
 }
 
-void trajectory(double mom[LX][LY][2], Complex gauge[LX][LY][2],
-		Complex phi[LX][LY][2], param_t p, int iter) {  
-  
+void trajectory(double*** mom, Complex*** gauge,
+		Complex*** phi, param_t p, int iter) {
+
+  Complex*** guess = gst.b05;
+  double*** fU = gst.c02;
+  double*** fD = gst.c03;
+
   double dtau = p.tau/p.nstep;
   double H = 0.0;
-  Complex guess[LX][LY][2];
+  //Complex guess[LX][LY][2];
 #ifdef USE_ARPACK
   zeroField(guess);
-  /*
-  //deflate using phi as source
-  //Deflation eigenvectors
-  Complex defl_evecs[NEV][LX][LY][2];
-  //Deflation eigenvalues
-  Complex defl_evals[NEV];
+  ////deflate using phi as source
+  ////Deflation eigenvectors
+  //Complex defl_evecs[NEV][LX][LY][2];
+  ////Deflation eigenvalues
+  //Complex defl_evals[NEV];
   
-  copyField(guess, phi);
-  arpack_solve(gauge, defl_evecs, defl_evals, 0, 0, p);
-  deflate(guess, phi, defl_evecs, defl_evals, p);
-  */
+  //copyField(guess, phi);
+  //arpack_solve(gauge, defl_evecs, defl_evals, 0, 0, p);
+  //deflate(guess, phi, defl_evecs, defl_evals, p);
 #else
   zeroField(guess);
 #endif
   
   //gauge force
-  double fU[LX][LY][2];
+  //double fU[LX][LY][2];
   //fermion fermion
-  double fD[LX][LY][2];
+  //double fD[LX][LY][2];
   //Both arrays are zeroed in forceU/D function call
-  
+
   //Initial half step.
   //P_{1/2} = P_0 - dtau/2 * (fU - fD)
   forceU(fU, gauge, p);
@@ -368,7 +409,9 @@ void trajectory(double mom[LX][LY][2], Complex gauge[LX][LY][2],
   forceU(fU, gauge, p);
   forceD(fD, gauge, phi, guess, p);
   update_mom(fU, fD, mom, 0.5*dtau);
-  
+
+  // TODO : freeing of memory
+
   //trajectory complete
 }
 //-------------------------------------------------------------------------------

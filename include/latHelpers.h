@@ -14,11 +14,27 @@ using namespace std;
 //---------------------------------------------------------------------------
 
 // Zero lattice 2D
+template<typename T> inline void zeroLat(T v) {
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++)
+      for(int mu=0; mu<2; mu++)
+	v[x][y][mu] = 0.0;
+}
+
+// Zero lattice 2D
 template<typename T> inline void zeroLat(T v[LX][LY][2]) {
   for(int x=0; x<LX; x++)
     for(int y=0; y<LY; y++)
       for(int mu=0; mu<2; mu++)
 	v[x][y][mu] = 0.0;
+}
+
+// Copy lattice 2D
+template<typename T> inline void copyLat(T v2, T v1) {
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++)
+      for(int mu=0; mu<2; mu++)
+	v2[x][y][mu] = v1[x][y][mu];
 }
 
 // Copy lattice 2D

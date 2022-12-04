@@ -389,6 +389,25 @@ double measTopCharge(const Complex gauge[LX][LY][2], param_t p){
   return top/TWO_PI;
 }
 
+double measTopCharge(Complex ***gauge, param_t p){
+
+  Complex*** smeared = gst.b07;
+
+  Complex w;
+  double top = 0.0;  
+  smearLink(smeared, gauge, p);
+  
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++){
+      w = (smeared[x][y][0] * smeared[ (x+1)%LX ][y][1] *
+	   conj(smeared[x][ (y+1)%LY ][0])*conj(smeared[x][y][1]));
+      top += arg(w);  // -pi < arg(w) < pi  Geometric value is an integer.
+      //print local def here for topology dynamics
+      //printf("arg(w) = [ arg(link1) + arg(link2) + c_arg(link3) + c_arg(link4)]
+    }
+  return top/TWO_PI;
+}
+
 double measGaugeAction(const Complex gauge[LX][LY][2], param_t p) {
 
   double beta  = p.beta;
@@ -403,7 +422,36 @@ double measGaugeAction(const Complex gauge[LX][LY][2], param_t p) {
   return Hgauge;
 }
 
+double measGaugeAction(Complex*** gauge, param_t p) {
+
+  double beta  = p.beta;
+  double Hgauge = 0.0;
+  Complex plaq = 0.0;
+  
+  for(int x=0; x<LX;x++)
+    for(int y=0; y<LY; y++){      
+      plaq = gauge[x][y][0]*gauge[ (x+1)%LX ][y][1]*conj(gauge[x][ (y+1)%LY ][0])*conj(gauge[x][y][1]);
+      Hgauge += beta*real(1.0 - plaq);
+    }
+  return Hgauge;
+}
+
 double measMomAction(const double mom[LX][LY][2], param_t p) {
+
+  double Hmom = 0.0;
+  Complex plaq;
+  
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++){
+      for(int mu=0; mu<2; mu++){
+	Hmom += 0.5*mom[x][y][mu] * mom[x][y][mu];
+      }
+    }
+  
+  return Hmom;
+}
+
+double measMomAction(double*** mom, param_t p) {
 
   double Hmom = 0.0;
   Complex plaq;
@@ -479,6 +527,34 @@ double measFermAction(const Complex gauge[LX][LY][2], const Complex phi[LX][LY][
   return Hferm;
 }
 
+double measFermAction(Complex*** gauge, Complex*** phi,
+		      param_t p, bool postStep) {
+
+  double Hferm = 0.0;
+  //Complex phitmp[LX][LY][2];
+
+  Complex*** phitmp = gst.b08;
+
+  //cout << "Before Fermion force H = " << H << endl;
+  Complex scalar = Complex(0.0,0.0);
+  zeroField(phitmp);
+  if(postStep) Ainvpsi(phitmp, phi, phitmp, gauge, p);
+  else copyField(phitmp, phi);
+  
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++){
+      for(int s=0; s<2; s++){
+	scalar += conj(phi[x][y][s])*phitmp[x][y][s];
+      }
+    }    
+  
+  Hferm += real(scalar);
+
+  // TODO : add freeing of data for phitmp
+
+  return Hferm;
+}
+
 //Wilson Action
 double measAction(const double mom[LX][LY][2], const Complex gauge[LX][LY][2],
 		  const Complex phi[LX][LY][2], param_t p, bool postStep) {
@@ -490,5 +566,17 @@ double measAction(const double mom[LX][LY][2], const Complex gauge[LX][LY][2],
   
   return H;
 }
+
+double measAction(double*** mom, Complex*** gauge,
+		  Complex*** phi, param_t p, bool postStep) {
+  
+  double H = 0.0;
+  H += measMomAction(mom, p);
+  H += measGaugeAction(gauge, p);
+  if (p.dynamic) H += measFermAction(gauge, phi, p, postStep);
+  
+  return H;
+}
+
 //-----------------------------------------------------------------------------------
 #endif

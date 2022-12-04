@@ -13,11 +13,27 @@ using namespace std;
 //Wilson Fermion Utilities
 //---------------------------------------------------------------------------------
 // Zero fermion field
+template<typename T> inline void zeroField(T psi) {
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++)
+      for(int s=0; s<2; s++)
+	psi[x][y][s] = 0.0;
+}
+
+// Zero fermion field
 template<typename T> inline void zeroField(T psi[LX][LY][2]) {
   for(int x=0; x<LX; x++)
     for(int y=0; y<LY; y++)
       for(int s=0; s<2; s++)
 	psi[x][y][s] = 0.0;
+}
+
+// Copy fermion field
+template<typename T> inline void copyField(T*** psi2, T*** psi1) {
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++)
+      for(int s=0; s<2; s++)
+	psi2[x][y][s] = psi1[x][y][s];
 }
 
 // Copy fermion field
@@ -38,6 +54,16 @@ template<typename T> inline T dotField(const T psi1[LX][LY][2], const T psi2[LX]
   return scalar;
 }
 
+// Inner product
+template<typename T> inline T dotField(T*** psi1, T*** psi2) {
+  T scalar = (T) 0.0;
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++)
+      for(int s=0; s<2; s++)
+	scalar += conj(psi1[x][y][s])*psi2[x][y][s];
+  return scalar;
+}
+
 // Norm squared 
 template<typename T> inline double norm2(const T psi[LX][LY][2]) {  
   double norm2 = 0.0;
@@ -49,6 +75,16 @@ template<typename T> inline double norm2(const T psi[LX][LY][2]) {
   return norm2;
 }
 
+// Norm squared 
+template<typename T> inline double norm2(T psi) {
+  double norm2 = 0.0;
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++)
+      for(int s=0; s<2; s++)
+	norm2 += (psi[x][y][s].real() * psi[x][y][s].real() + psi[x][y][s].imag() * psi[x][y][s].imag());
+  
+  return norm2;
+}
 
 template<typename T> inline void caxpby(const T a, const T X[LX][LY][2],
 					const T b, const T Y[LX][LY][2],
@@ -94,10 +130,27 @@ template<typename T> inline void axpy(const double a, const T X[LX][LY][2], T Y[
 	Y[x][y][s] = a*X[x][y][s] + Y[x][y][s];
 }
 
+//axpy in place 
+template<typename T> inline void axpy(const double a, T*** X, T*** Y){
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++)
+      for(int s=0; s<2; s++)
+	Y[x][y][s] = a*X[x][y][s] + Y[x][y][s];
+}
+
 //axpy in result
 template<typename T> inline void axpy(const double a, const T X[LX][LY][2], 
 				      const T Y[LX][LY][2],
 				      T result[LX][LY][2]){  
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++)
+      for(int s=0; s<2; s++)
+	result[x][y][s] = a*X[x][y][s] + Y[x][y][s];
+}
+
+//axpy in result
+template<typename T> inline void axpy(const double a, T*** X,
+				      T*** Y, T*** result){  
   for(int x=0; x<LX; x++)
     for(int y=0; y<LY; y++)
       for(int s=0; s<2; s++)
