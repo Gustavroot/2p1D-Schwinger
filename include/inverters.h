@@ -212,8 +212,6 @@ int Ainvpsi(Complex*** x, Complex*** b, Complex*** x0,
   auto duration = duration_cast<microseconds>(stop - start);
   gst.inv_time += duration.count();
 
-  // TODO : add freeings of data for res, p, Ap, tmp
-
   //double truersq = real(dotField(res, res));
   //printf("CG: Converged iter = %d, rsq = %.16e, truersq = %.16e\n", k+1, rsq, truersq/(bsqrt*bsqrt));
   return success;

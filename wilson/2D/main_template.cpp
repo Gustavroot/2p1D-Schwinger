@@ -348,8 +348,6 @@ int hmc(Complex*** gauge, param_t p, int iter) {
     else accept = 1;
   }
 
-  // TODO : add freeing of data for gaugex, buff1, buff2, buff3
-  
   return accept;
 }
 
@@ -409,8 +407,6 @@ void trajectory(double*** mom, Complex*** gauge,
   forceU(fU, gauge, p);
   forceD(fD, gauge, phi, guess, p);
   update_mom(fU, fD, mom, 0.5*dtau);
-
-  // TODO : freeing of memory
 
   //trajectory complete
 }

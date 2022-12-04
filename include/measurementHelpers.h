@@ -550,8 +550,6 @@ double measFermAction(Complex*** gauge, Complex*** phi,
   
   Hferm += real(scalar);
 
-  // TODO : add freeing of data for phitmp
-
   return Hferm;
 }
 

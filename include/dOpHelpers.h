@@ -208,8 +208,6 @@ void DdagDpsi(Complex*** psi2, Complex*** psi1,
   g3psi(temp);
   Dpsi(psi2, temp, gauge, p);
   g3psi(psi2);
-
-  // TODO : add freeing of memory for temp
 }
 
 void deflate(Complex guess_defl[LX][LY][2], Complex guess[LX][LY][2],
