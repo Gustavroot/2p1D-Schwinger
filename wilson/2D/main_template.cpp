@@ -178,8 +178,6 @@ int main(int argc, char **argv) {
     iter_offset = 2*p.therm;    
   }
 
-  /*
-
   // Measure top charge on mother ensemble
   top = measTopCharge(gaugex, p);
   top_old = round(top);
@@ -217,7 +215,7 @@ int main(int argc, char **argv) {
     //Perform Measurements
     //---------------------------------------------------------------------
     if( (iter+1)%p.skip == 0) {
-      
+
       count++; //Number of measurements taken
 
       //Checkpoint the gauge field?
@@ -229,7 +227,7 @@ int main(int argc, char **argv) {
       }
       
       //Plaquette action
-      double plaq = measPlaq(gauge);
+      double plaq = measPlaq(gaugex);
       plaqSum += plaq;
 
       //Dump simulation data to stdout
@@ -259,7 +257,7 @@ int main(int argc, char **argv) {
 	      (double)accepted/(count*p.skip),
 	      top_int);
       fclose(fp);
-      
+
       //Update topoligical charge histogram
       name = "data/top/top_hist";
       constructName(name, p);
@@ -272,19 +270,16 @@ int main(int argc, char **argv) {
       //Physical observables
       //-------------------------------------------------------------      
       //Gauge observables
-      if(p.measPL || p.measWL) measWilsonLoops(gauge, iter, p);
+      //if(p.measPL || p.measWL) measWilsonLoops(gauge, iter, p);
       
       //Pion Correlation
-      if(p.measPC) measPionCorrelation(gauge, top_old, iter, p);
+      if(p.measPC) measPionCorrelation(gaugex, top_old, iter, p);
       
       //Vacuum Trace
-      if(p.measVT) measVacuumTrace(gauge, top_old, iter, p);
+      //if(p.measVT) measVacuumTrace(gauge, top_old, iter, p);
       //-------------------------------------------------------------
     }
-
   }
-
-  */
 
   auto stop = high_resolution_clock::now();
   auto duration = duration_cast<microseconds>(stop - start);
@@ -355,12 +350,14 @@ void trajectory(double*** mom, Complex*** gauge,
 		Complex*** phi, param_t p, int iter) {
 
   Complex*** guess = gst.b05;
+  //gauge force
   double*** fU = gst.c02;
+  //fermion fermion
   double*** fD = gst.c03;
+  //Both arrays are zeroed in forceU/D function call
 
   double dtau = p.tau/p.nstep;
   double H = 0.0;
-  //Complex guess[LX][LY][2];
 #ifdef USE_ARPACK
   zeroField(guess);
   ////deflate using phi as source
@@ -375,12 +372,6 @@ void trajectory(double*** mom, Complex*** gauge,
 #else
   zeroField(guess);
 #endif
-  
-  //gauge force
-  //double fU[LX][LY][2];
-  //fermion fermion
-  //double fD[LX][LY][2];
-  //Both arrays are zeroed in forceU/D function call
 
   //Initial half step.
   //P_{1/2} = P_0 - dtau/2 * (fU - fD)

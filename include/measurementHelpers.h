@@ -174,7 +174,7 @@ void measWilsonLoops(const Complex gauge[LX][LY][2], int iter, param_t p){
 // i.e., the sum of the modulus squared of each element
 
 void measPionCorrelation(const Complex gauge[LX][LY][2], int top, int iter, param_t p){
-  
+
   //Up type fermion prop
   Complex propUp[LX][LY][2];
   //Down type fermion prop
@@ -297,6 +297,161 @@ void measPionCorrelation(const Complex gauge[LX][LY][2], int top, int iter, para
   fclose(fp);
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void measPionCorrelation(Complex*** gauge, int top, int iter, param_t p){
+
+  //Up type fermion prop
+  Complex*** propUp = gst.b15;
+  //Down type fermion prop
+  Complex*** propDn = gst.b16;
+  //fermion prop CG guess
+  Complex*** propGuess = gst.b17;
+
+  //Deflation eigenvectors
+  Complex defl_evecs[NEV][LX][LY][2];
+  //Deflation eigenvalues
+  Complex defl_evals[NEV];
+      
+  double pion_corr[LY];
+
+  Complex*** source = gst.b18;
+  Complex*** Dsource = gst.b19;
+
+  char fname[256];
+  string name;
+  FILE *fp;
+  
+  //Deflate if requested
+#ifdef USE_ARPACK
+  arpack_solve(gauge, defl_evecs, defl_evals, 0, 0, p);
+#endif
+  
+  //Up type source
+  zeroField(source);
+  zeroField(Dsource);
+  zeroField(propUp);
+  zeroField(propGuess);
+  source[0][0][0] = cUnit;
+  
+  // up -> (g3Dg3) * up *****
+  // (g3Dg3D)^-1 * (g3Dg3) up = D^-1 * up *****
+
+  g3psi(source);
+  g3Dpsi(Dsource, source, gauge, p);  
+
+  if (p.deflate) deflate(propGuess, Dsource, defl_evecs, defl_evals, p);
+  Ainvpsi(propUp, Dsource, propGuess, gauge, p);
+
+  //Down type source
+  zeroField(source);
+  zeroField(Dsource);
+  zeroField(propDn);
+  zeroField(propGuess);
+  source[0][0][1] = cUnit;	    
+      
+  // dn -> (g3Dg3) * dn *****
+  // (g3Dg3D)^-1 * (g3Dg3) dn = D^-1 * dn ***** 
+
+  g3psi(source);
+  g3Dpsi(Dsource, source, gauge, p);
+
+  if (p.deflate) deflate(propGuess, Dsource, defl_evecs, defl_evals, p);
+  Ainvpsi(propDn, Dsource, propGuess, gauge, p);
+
+  //Get estimate of vacuum trace
+  Complex q[2] = {0.0,0.0};
+  q[0] = propUp[0][0][0];
+  q[1] = propDn[0][0][1];
+
+  double vacuum_trace = (q[0] - q[1]).real();
+  
+  name = "data/vacuum/estimate_vacuum_Q" + std::to_string(abs(top));
+  constructName(name, p);
+  name += ".dat";
+  sprintf(fname, "%s", name.c_str());
+  fp = fopen(fname, "a");
+  fprintf(fp, "%d ", iter+1);
+  fprintf(fp, "%.16e\n", vacuum_trace);
+  fclose(fp);
+  
+  //Let y be the 'time' dimension
+  double corr = 0.0, tmp = 0.0;
+  for(int y=0; y<LY; y++) {
+    //initialise
+    pion_corr[y] = 0.0;
+    //Loop over space and spin, fold propagator
+    corr = 0.0;
+    for(int x=0; x<LX; x++) {
+      tmp = abs((conj(propDn[x][y][0]) * propDn[x][y][0] +
+      		 conj(propDn[x][y][1]) * propDn[x][y][1] +
+      		 conj(propUp[x][y][0]) * propUp[x][y][0] +
+      		 conj(propUp[x][y][1]) * propUp[x][y][1]));
+      
+      corr += tmp;
+    }
+    
+    //Compute folded propagator
+    if ( y < ((LY/2)+1) ) pion_corr[y] += corr;
+    else {
+      pion_corr[LY-y] += corr;
+      pion_corr[LY-y] /= 2.0;
+    }
+  }
+  
+  //topological sector pion correlation
+  name = "data/pion/pion_Q" + std::to_string(abs(top));
+  constructName(name, p);
+  name += ".dat";  
+  sprintf(fname, "%s", name.c_str());
+  fp = fopen(fname, "a");
+  fprintf(fp, "%d ", iter+1);
+  for(int t=0; t<LY/2+1; t++)
+    fprintf(fp, "%.16e ", pion_corr[t]);
+  fprintf(fp, "\n");
+  fclose(fp);
+
+  //Full pion correlation
+  name = "data/pion/pion";
+  constructName(name, p);
+  name += ".dat";  
+  sprintf(fname, "%s", name.c_str());
+  fp = fopen(fname, "a");
+  fprintf(fp, "%d ", iter+1);
+  for(int t=0; t<LY/2+1; t++)
+    fprintf(fp, "%.16e ", pion_corr[t]);
+  fprintf(fp, "\n");
+  fclose(fp);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void measVacuumTrace(const Complex gauge[LX][LY][2], int top, int iter, param_t p) {
   

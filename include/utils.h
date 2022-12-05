@@ -79,6 +79,11 @@ typedef struct{
   Complex*** b12;
   Complex*** b13;
   Complex*** b14;
+  Complex*** b15;
+  Complex*** b16;
+  Complex*** b17;
+  Complex*** b18;
+  Complex*** b19;
   Complex*** b0X;
   double*** c01;
   double*** c02;
@@ -168,6 +173,26 @@ void writeGaugeLattice(Complex gauge[LX][LY][2], string name){
   return;
   
 }
+
+void writeGaugeLattice(Complex*** gauge, string name){
+
+  fstream outPutFile;
+  outPutFile.open(name,ios::in|ios::out|ios::trunc);  
+  outPutFile.setf(ios_base::fixed,ios_base::floatfield); 
+
+  //Plaquette action header
+  outPutFile << setprecision(20) <<  setw(20) << measPlaq(gauge) << endl;
+  
+  for(int x=0; x<LX; x++)
+    for(int y=0; y<LY; y++)
+      for(int mu=0; mu<2; mu++)
+	outPutFile << setprecision(12) <<  setw(20) << arg(gauge[x][y][mu]) << endl;
+  
+  outPutFile.close();
+  return;
+  
+}
+
 void readGaugeLattice(Complex*** gauge, string name){
 
   fstream inPutFile;
@@ -469,6 +494,11 @@ void buff_allocs(){
   buff_alloc(&(gst.b12));
   buff_alloc(&(gst.b13));
   buff_alloc(&(gst.b14));
+  buff_alloc(&(gst.b15));
+  buff_alloc(&(gst.b16));
+  buff_alloc(&(gst.b17));
+  buff_alloc(&(gst.b18));
+  buff_alloc(&(gst.b19));
   buff_alloc(&(gst.b0X));
 
   buff_alloc(&(gst.c01));
@@ -492,6 +522,12 @@ void buff_frees(){
   buff_free(&(gst.b12));
   buff_free(&(gst.b13));
   buff_free(&(gst.b14));
+  buff_free(&(gst.b15));
+  buff_free(&(gst.b16));
+  buff_free(&(gst.b17));
+  buff_free(&(gst.b18));
+  buff_free(&(gst.b19));
+
   buff_free(&(gst.b0X));
 
   buff_free(&(gst.c01));
